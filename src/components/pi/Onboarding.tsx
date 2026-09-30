@@ -535,6 +535,29 @@ export function Onboarding(props: OnboardingProps) {
         <Separator className="my-10" />
 
         <footer className="space-y-2 text-center text-xs text-muted-foreground">
+          <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[13px]">
+            <span className="font-medium text-foreground/90">
+              Made With <span aria-hidden>❤️</span> By Naman
+            </span>
+            <span aria-hidden>•</span>
+            <a
+              href="https://github.com/NamanSoni78"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground"
+            >
+              <Github className="h-3 w-3" aria-hidden /> GitHub Account
+            </a>
+            <span aria-hidden>•</span>
+            <a
+              href="https://github.com/NamanSoni78/pi-browser-agent"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Open Source
+            </a>
+          </p>
           <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
             <span>Pi is an agent harness by</span>
             <a

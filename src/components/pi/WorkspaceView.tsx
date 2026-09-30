@@ -208,14 +208,37 @@ export function WorkspaceView(props: WorkspaceViewProps) {
       </main>
 
       {/* ---------- footer strip ---------- */}
-      <footer className="flex h-8 shrink-0 items-center justify-between border-t bg-card/40 px-3 text-[11px] text-muted-foreground sm:px-4">
-        <span className="inline-flex items-center gap-1.5">
-          <Battery className="h-3 w-3" aria-hidden />
-          Everything runs in this tab — the sandbox resets on reload.
+      <footer className="flex h-8 shrink-0 items-center justify-between gap-2 border-t bg-card/40 px-3 text-[11px] text-muted-foreground sm:px-4">
+        <span className="hidden min-w-0 items-center gap-1.5 sm:inline-flex">
+          <Battery className="h-3 w-3 shrink-0" aria-hidden />
+          <span className="truncate">Everything runs in this tab — the sandbox resets on reload.</span>
         </span>
-        <span className="hidden items-center gap-1.5 sm:inline-flex">
-          {pollen?.user?.preferred_username && <span>· {pollen.user.preferred_username}</span>}
-          <span>· BYO Pollen</span>
+        <span className="inline-flex min-w-0 shrink-0 items-center gap-1.5">
+          <span className="hidden items-center gap-1.5 md:inline-flex">
+            {pollen?.user?.preferred_username && <span>{pollen.user.preferred_username} ·</span>}
+            <span>BYO Pollen ·</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span>Made With ❤️ By Naman</span>
+            <span aria-hidden>•</span>
+            <a
+              href="https://github.com/NamanSoni78"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              GitHub Account
+            </a>
+            <span aria-hidden>•</span>
+            <a
+              href="https://github.com/NamanSoni78/pi-browser-agent"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Open Source
+            </a>
+          </span>
         </span>
       </footer>
     </div>
