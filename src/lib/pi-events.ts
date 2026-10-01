@@ -6,6 +6,7 @@
  * execution results to their tool calls by `toolCallId`.
  */
 import type { PiEvent, Turn, TurnBlock } from "./types";
+import { toText } from "./utils";
 
 let blockCounter = 0;
 function nextBlockId(): string {
@@ -57,12 +58,66 @@ function contentToText(content: unknown): string {
   return "";
 }
 
-function prettyArgs(raw: string): string {
+function prettyArgs(raw: unknown): string {
+  const text = typeof raw === "string" ? raw : toText(raw);
+  if (!text.trim()) return "";
   try {
-    const parsed = JSON.parse(raw);
-    return JSON.stringify(parsed, null, 2);
+    return JSON.stringify(JSON.parse(text), null, 2);
   } catch {
-    return raw;
+    return text;
+  }
+}
+
+/**
+ * Tool arguments arrive from pi either as a raw JSON string or as an
+ * already-parsed object (observed with real streaming models). Normalize to a
+ * JSON string so downstream consumers can always treat args as a string.
+ */
+function normalizeToolArgs(value: unknown, fallback: string): string {
+  if (typeof value === "string") return value;
+  if (value != null && typeof value === "object") {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return fallback;
+    }
+  }
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return fallback;
+}
+
+/** Short single-line summary of the tool args, for the collapsed card header. */
+export function summarizeArgs(toolName: string, argsInput: unknown): string {
+  const args = typeof argsInput === "string" ? argsInput : toText(argsInput);
+  if (!args.trim()) return "";
+  try {
+    const parsed = JSON.parse(args) as Record<string, unknown>;
+    const first = (key: string): string => {
+      const value = parsed[key];
+      return typeof value === "string" ? value : "";
+    };
+    switch (toolName) {
+      case "bash":
+        return first("command");
+      case "write":
+        return first("path");
+      case "edit":
+        return first("path");
+      case "read":
+        return first("path");
+      case "grep":
+        return first("pattern");
+      case "find":
+        return first("pattern");
+      case "ls":
+        return first("path") || "(workspace)";
+      default: {
+        const values = Object.values(parsed);
+        return values.map((v) => toText(v).split("\n")[0]).join(" ").slice(0, 80);
+      }
+    }
+  } catch {
+    return args.slice(0, 80);
   }
 }
 
@@ -90,13 +145,13 @@ export function applyEvent(turn: Turn, event: PiEvent): void {
         }
         case "text_delta": {
           const block = lastBlock(turn, "text");
-          if (block?.kind === "text") block.content += inner.delta ?? "";
+          if (block?.kind === "text") block.content += toText(inner.delta);
           break;
         }
         case "text_end": {
           const block = lastBlock(turn, "text");
           if (block?.kind === "text") {
-            if (inner.content != null) block.content = inner.content;
+            if (inner.content != null) block.content = toText(inner.content);
             block.streaming = false;
           }
           break;
@@ -112,13 +167,13 @@ export function applyEvent(turn: Turn, event: PiEvent): void {
         }
         case "thinking_delta": {
           const block = lastBlock(turn, "thinking");
-          if (block?.kind === "thinking") block.content += inner.delta ?? "";
+          if (block?.kind === "thinking") block.content += toText(inner.delta);
           break;
         }
         case "thinking_end": {
           const block = lastBlock(turn, "thinking");
           if (block?.kind === "thinking") {
-            if (inner.content != null) block.content = inner.content;
+            if (inner.content != null) block.content = toText(inner.content);
             block.streaming = false;
           }
           break;
@@ -137,7 +192,7 @@ export function applyEvent(turn: Turn, event: PiEvent): void {
         }
         case "toolcall_delta": {
           const block = lastBlock(turn, "tool");
-          if (block?.kind === "tool") block.args += inner.delta ?? "";
+          if (block?.kind === "tool") block.args += toText(inner.delta);
           break;
         }
         case "toolcall_end": {
@@ -147,7 +202,7 @@ export function applyEvent(turn: Turn, event: PiEvent): void {
             if (call) {
               block.toolCallId = call.id ?? block.toolCallId;
               block.toolName = call.name ?? block.toolName;
-              block.args = call.arguments ?? block.args;
+              block.args = normalizeToolArgs(call.arguments, block.args);
             }
             block.argsPretty = prettyArgs(block.args);
           }
@@ -198,8 +253,10 @@ export function applyEvent(turn: Turn, event: PiEvent): void {
     case "tool_execution_update": {
       const block = blockByToolCallId(turn, event.toolCallId);
       if (block?.kind === "tool") {
-        const partial = event.partialResult as { content?: { text?: string }[] } | undefined;
-        const text = partial?.content?.map((c) => c.text ?? "").join("");
+        const partial = event.partialResult as { content?: unknown[] } | undefined;
+        const text = partial?.content
+          ?.map((c) => toText((c as { text?: unknown } | null)?.text))
+          .join("");
         if (text) block.output = text;
       }
       break;
@@ -211,7 +268,7 @@ export function applyEvent(turn: Turn, event: PiEvent): void {
         block.state = event.isError ? "error" : "done";
         block.isError = event.isError;
         const text = event.result?.content
-          ?.map((c) => c.text ?? "")
+          ?.map((c) => toText((c as { text?: unknown } | null)?.text))
           .join("")
           .trim();
         if (text) block.output = text;
@@ -235,24 +292,24 @@ export function applyEvent(turn: Turn, event: PiEvent): void {
       // Surface retries as a transient status; the UI reads turn.errorText.
       turn.errorText = `Retrying after error (attempt ${event.attempt ?? "?"} of ${
         event.maxAttempts ?? "?"
-      }): ${event.errorMessage ?? ""}`;
+      }): ${toText(event.errorMessage)}`;
       break;
 
     case "auto_retry_end":
       if (event.success) turn.errorText = undefined;
-      else turn.errorText = event.finalError ?? "The model request failed after retries.";
+      else turn.errorText = toText(event.finalError) || "The model request failed after retries.";
       break;
 
     case "compaction_start":
-      turn.errorText = `Compacting conversation (${event.reason ?? "threshold"})…`;
+      turn.errorText = `Compacting conversation (${toText(event.reason) || "threshold"})…`;
       break;
 
     case "compaction_end":
-      turn.errorText = event.errorMessage;
+      turn.errorText = toText(event.errorMessage) || undefined;
       break;
 
     case "extension_error":
-      turn.errorText = `Extension error (${event.extensionPath ?? "?"}): ${event.error ?? ""}`;
+      turn.errorText = `Extension error (${toText(event.extensionPath) || "?"}): ${toText(event.error)}`;
       break;
 
     default:

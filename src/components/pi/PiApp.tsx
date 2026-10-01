@@ -285,7 +285,7 @@ export function PiApp() {
         if (turn.state === "error") {
           toast({
             title: "Pi run failed",
-            description: (turn.errorText ?? "").slice(0, 300) || "See the turn details.",
+            description: String(turn.errorText ?? "").slice(0, 300) || "See the turn details.",
             variant: "destructive",
           });
         }

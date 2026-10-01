@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { summarizeArgs } from "@/lib/pi-events";
 import type { PollinationsModel, Turn, TurnBlock } from "@/lib/types";
 
 interface ChatPanelProps {
@@ -47,39 +48,6 @@ const TOOL_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
 function ToolIcon({ name }: { name: string }) {
   const Icon = TOOL_ICONS[name] ?? Terminal;
   return <Icon className="h-3.5 w-3.5" />;
-}
-
-/** Short single-line summary of the tool args, for the collapsed card header. */
-function summarizeArgs(toolName: string, args: string): string {
-  try {
-    const parsed = JSON.parse(args) as Record<string, unknown>;
-    const first = (key: string): string => {
-      const value = parsed[key];
-      return typeof value === "string" ? value : "";
-    };
-    switch (toolName) {
-      case "bash":
-        return first("command");
-      case "write":
-        return first("path");
-      case "edit":
-        return first("path");
-      case "read":
-        return first("path");
-      case "grep":
-        return first("pattern");
-      case "find":
-        return first("pattern");
-      case "ls":
-        return first("path") || "(workspace)";
-      default: {
-        const values = Object.values(parsed);
-        return values.map((v) => String(v)).join(" ").slice(0, 80);
-      }
-    }
-  } catch {
-    return args.slice(0, 80);
-  }
 }
 
 function ThinkingBlock({ block }: { block: Extract<TurnBlock, { kind: "thinking" }> }) {

@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "postinstall": "node scripts/copy_wasmer_vendor.mjs",
     "vendor:copy": "node scripts/copy_wasmer_vendor.mjs",
+    "test:events": "bun scripts/test_pi_events.ts",
     "e2e:fixture": "node mini-services/pi-e2e-fixture/index.mjs"
   },
   "dependencies": {

@@ -152,7 +152,7 @@ export interface PiAssistantMessageEvent {
   content?: string;
   id?: string;
   toolName?: string;
-  toolCall?: { id?: string; name: string; arguments: string };
+  toolCall?: { id?: string; name: string; arguments: unknown };
 }
 
 export type PiEvent =
